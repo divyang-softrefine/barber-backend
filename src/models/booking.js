@@ -7,6 +7,7 @@ const bookingSchema = new mongoose.Schema(
         type: mongoose.Schema.ObjectId,
         ref: "users",
     },
+    
     bookings:[{
         start_time:{
             type:Date,
@@ -18,6 +19,10 @@ const bookingSchema = new mongoose.Schema(
         },
         total:{
             type:Number
+        },
+        barber_id:{
+            type: mongoose.Schema.ObjectId,
+            ref: "barbers",
         },
     }]
   }

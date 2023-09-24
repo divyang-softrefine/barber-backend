@@ -38,15 +38,12 @@ const barberSchema = new mongoose.Schema(
     services:[{
         name:{
             type:String,
-            required:true
         },
         time:{
-            type:Number,
-            required:true
+            type:String,
         },
         price:{
-            type:Number,
-            required:true
+            type:String,
         }
     }],
     seats:{

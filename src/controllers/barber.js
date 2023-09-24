@@ -50,25 +50,34 @@ exports.register = catchAsync(async (req, res, next) => {
 });
 
 exports.services = catchAsync(async (req, res, next) => {
-  const services = req.body;
-
-  if(services.length===0){
+  const {goods} = req.body;
+console.log(goods)
+  if(goods && goods.length===0){
     throw new AppError("Services can't be empty", 404);
   }
-
-  const user = req.user;
-
-  const barber = await Barber.findOne({user_id:user._id});
-
-  barber.services = services;
-
+  const barber = await Barber.findOne({_id:'650b01588d390cc1f06aff4d'});
+  if(!barber){
+    throw new AppError("Barber Not found", 404);
+  }
+  barber.services = goods;
   await barber.save();
 
   res.send({
     message:"Services Updated Successfully",
-    data:barber
+    data:barber.services
   })
 });
+
+exports.getservices = catchAsync(async (req, res, next) => {  
+    const barber = await Barber.findOne({_id:'650b01588d390cc1f06aff4d'});
+    if(!barber){
+      throw new AppError("Barber Not found", 404);
+    }
+    res.send({
+      message:"Services",
+      data:barber.services
+    })
+  });
 
 exports.shopdetail = catchAsync(async (req, res, next) => {
   const detail = req.body.detail;
@@ -94,3 +103,58 @@ exports.shopdetail = catchAsync(async (req, res, next) => {
     data:barber
   })
 });
+
+exports.getAllBarber = catchAsync(async (req, res, next) => {
+      const pageSize = parseInt(req.query.pagesize) || 5;
+      const page = parseInt(req.query.page) || 1;
+      const query = req.query.search;
+      let queries = query?query.split(" "):[];
+     const fields = ["address", "shop_name", 'owner_name'];
+     const orConditions = queries.map((query) =>
+       fields.map((field) => ({ [field]: { $regex: query, $options: "i" } }))
+     );
+     const flattenedOrConditions = orConditions.reduce(
+       (acc, conditions) => [...acc, { $or: conditions }],
+       []
+     );
+     let con = {
+    }
+     if(flattenedOrConditions.length>0){
+      con = { $and: flattenedOrConditions,}
+     }
+     
+    // const barbers = await User.find({userRole:"customer"});
+    const barbers = await Barber.aggregate([
+       {
+        $match:con
+       },
+      {
+        $addFields: fields.reduce((fieldsToAdd, field) => {
+          fieldsToAdd[field] = `$${field}`;
+          return fieldsToAdd;
+        }, {}),
+      },
+      {
+        $facet: {
+          metaData: [
+            {
+              $count: 'total',
+            },
+          ],
+          records: [{ $skip: pageSize * (page-1) }, { $limit: pageSize }],
+        },
+      }
+      ]);
+
+    res.status(200).json({
+      status: "success",
+      message:"All Barber Fetched Successfully",
+      data:barbers.length>0?barbers[0].records:barbers,
+      total:barbers.length>0?barbers[0].metaData.length>0?barbers[0].metaData[0].total:'':'',
+     });
+
+})
+
+exports.getOneBarber = catchAsync(async (req, res, next) => {
+
+})    
