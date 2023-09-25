@@ -29,7 +29,7 @@ exports.userCheck = catchAsync(async (req, res, next) => {
 });
 
 exports.login =catchAsync(async (req, res, next) => {
-  console.log('User')
+
   if (!req.body.email) {
    throw new AppError("Please Provide Email", 400);
   }
@@ -51,24 +51,6 @@ exports.login =catchAsync(async (req, res, next) => {
   this.createJWTToken(myUser, 201, res);
 });
 
-exports.register = catchAsync(async (req, res, next) => {
-  if (!req.body.email) {
-    throw new AppError("Please Provide Email", 400);
-  }
-  if (!req.body.password) {
-    throw new AppError("Please Provide Password", 400);
-  }
-  const myUser = await User.findOne({ email: req.body.email });
-  if(myUser) {
-    throw new AppError("Eamil Already Exist", 404);
-  }
-  const newUser = new User({email:req.body.email,password:req.body.password,phone:req.body.phone,firstName:req.body.firstName,lastName:req.body.lastName,userRole:req.body.userRole,});
-  await newUser.save();
-  res.send({
-    message:"User Created Successfully",
-    user:newUser
-  })
-});
 
 exports.createJWTToken = (user, statusCode, res) => {
   const token = signToken(user._id);
@@ -108,81 +90,6 @@ exports.verifyJWT = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.generateOtp = catchAsync(async(req,res,next) =>{
-  if(!req.body.phone){
-    throw new AppError("Please Provide valid Phone Number",400);
-  }
-
-  const user = await User.findOne({phone:req.body.phone});
-  if (!user) {
-    throw new AppError("User does not exist for this number", 400);
-  }
-
-  if (user.otp !== null && user.expiresIn != 0 && user.expiresIn > Date.now()) {
-    return res.status(201).json({
-      status: "successs",
-      data: {
-        detail: "please provide otp",
-      },
-    });
-  }
-
-  user.otp = Math.floor(Math.random() * (999999 - 111111) + 1) + 111111;
-  user.expiresIn = Date.now() + 60000;
-  await user.save();
-    client.messages
-      .create({
-        body: `Here Is your Otp ${user.otp}.Please Do not Share It with Anyone.`,
-        from: process.env.TWILIO_NUMBER,
-        to: user.phone,
-      })
-      .then((message) => console.log(message.sid));
-  return res.status(201).json({
-    status: "success",
-    data: {
-      //Only send in Dev not in Prod.
-      detail:"details of user",
-    },
-  });
-})
-
-exports.verifyotp = catchAsync( async(req, res, next)=>{
-  if(!req.body.otp){
-     throw new AppError("Please Provide otp", 400);
-  }
-  const user = await User.findOne({otp:req.body.otp});
-  if(!user){
-    throw new AppError("Please Provide valid otp", 400);
-  }
-  if(user.expiresIn<Date.now()){
-    user.expiresIn = 0;
-    user.otp = null;
-    await user.save();
-     throw new AppError("Otp Expired", 400);
-  }
-  this.createJWTToken(user,201,res);
-  next();
-});
-
-exports.newpassword = catchAsync(async (req, res, next) => {
-  if (req.body.password !== req.body.verifypassword) {
-    throw new AppError("Password Do not Match", 400);
-  }
-  const _id = req.body.driver_id?req.body.driver_id:req.user._id;
-  const user = await User.findOne({_id});
-  if(!user){
-    throw new AppError("Can't update password ,User Is unauthenticated", 403);
-  };
-  user.password = req.body.password;
-  user.otp=null;
-  user.expiresIn=0;
-  await user.save();
-  res.send({
-    status: "success",
-    newPassword: req.body.password,
-  });
-});
-
 exports.resetPassword = catchAsync(async (req, res, next) => {
   const user = req.user;
 
@@ -212,6 +119,24 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "Password Reset Successfully",
+  });
+});
+
+exports.update = catchAsync(async (req, res, next) => {
+const id = req.params.id;
+ const user =await User.findOne({_id:id})
+
+  
+  user.firstName = req.body.firstName;
+  user.lastName = req.body.lastName;
+  user.phone = req.body.phone;
+  user.address = req.body.address;
+  await user.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "User Updated Successfully",
+    data:user
   });
 });
 

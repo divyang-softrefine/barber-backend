@@ -6,7 +6,6 @@ const handelCastErrorDB = (err) => {
 };
 
 const handelDuplicateFieldsDB = (err) => {
-  console.log(err)
   const value = err.message.match(/(["'])(\\?.)*?\1/)[0];
   const message = `Duplicate field value: ${value} Please use another Value`;
   return new AppError(message, 400);

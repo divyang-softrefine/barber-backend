@@ -7,51 +7,8 @@ const salt = bcrypt.genSaltSync(10);
 const { promisify } = require("util");
 const {createJWTToken} = require("./user")
 
-exports.login =catchAsync(async (req, res, next) => {
-  if (!req.body.email) {
-   throw new AppError("Please Provide Email", 400);
-  }
- if (!req.body.password) {
-   throw new AppError("Please Provide Password", 400);
- }
-  const myUser = await Barber.findOne({ email: req.body.email });
-
-  if (!myUser) {
-    throw new AppError("Barber Does Not Exist", 404);
-  }
-  const validPassword=await bcrypt.compare(req.body.password,myUser.password);
-
-  if (!validPassword ) {
-    throw new AppError("Invalid Credentials.", 400);
-  }
-  req.user = myUser;
-  myUser.loc = req.body.loc
-  myUser.save();
-  createJWTToken(myUser, 201, res);
-});
-
-exports.register = catchAsync(async (req, res, next) => {
-  if (!req.body.email) {
-    throw new AppError("Please Provide Email", 400);
-  }
-  if (!req.body.password) {
-    throw new AppError("Please Provide Password", 400);
-  }
-  const myUser = await Barber.findOne({ email: req.body.email });
-  if(myUser) {
-    throw new AppError("Eamil Already Exist", 404);
-  }
-  const newUser = new User({email:req.body.email,password:req.body.password,phone:req.body.phone,owner_name:req.body.owner_name,shop_name:req.body.shop_name,address:req.body.address});
-  await newUser.save();
-  res.send({
-    message:"User Created Successfully",
-    user:newUser
-  })
-});
-
 exports.services = catchAsync(async (req, res, next) => {
   const {goods} = req.body;
-console.log(goods)
   if(goods && goods.length===0){
     throw new AppError("Services can't be empty", 404);
   }
@@ -69,6 +26,7 @@ console.log(goods)
 });
 
 exports.getservices = catchAsync(async (req, res, next) => {  
+  const id = req.params.id;
     const barber = await Barber.findOne({_id:'650b01588d390cc1f06aff4d'});
     if(!barber){
       throw new AppError("Barber Not found", 404);
@@ -80,21 +38,39 @@ exports.getservices = catchAsync(async (req, res, next) => {
   });
 
 exports.shopdetail = catchAsync(async (req, res, next) => {
-  const detail = req.body.detail;
-
+  const detail = req.body;
+  console.log(detail)
   const user = req.user;
 
-  const barber = await Barber.findOne({user_id:user._id});
+  const barber = await Barber.findOne({ _id:'650b01588d390cc1f06aff4d'});
 
-    if(detail.start_time){
+    if(!detail.start_time){
         throw new AppError("Please Provide start time", 400);
-    }else if(detail.end_time){
+    }
+    if(!detail.end_time){
         throw new AppError("Please Provide end time", 400);
     }
+  let start_time = detail.start_time.split(":");
+  start_time = {
+    hour:start_time[0],
+    minute:start_time[1]
+  }
+  let end_time = detail.end_time.split(":");
+  end_time = {
+    hour: end_time[0],
+    minute: end_time[1]
+  }
+  console.log(start_time);
+  console.log(barber)
+  barber.start_time = start_time;
+  console.log(end_time)
+  barber.end_time = end_time;
 
-  barber.start_time = detail.start_time;
-  barber.end_time = detail.end_time;
   barber.seats = detail.seats?detail.seats:0;
+  barber.owner_name = detail.owner_name;
+  barber.shop_name=detail.shop_name;
+  barber.phone = detail.phone;
+  barber.address = detail.address;
 
   await barber.save();
 

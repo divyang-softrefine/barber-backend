@@ -3,10 +3,7 @@ const validator = require("validator");
 const bcrypt = require("bcryptjs");
 const salt = bcrypt.genSaltSync(10);
 
-const time ={
-  hour:Number,
-  minute:Number
-}
+
 
 const barberSchema = new mongoose.Schema(
   {
@@ -51,10 +48,12 @@ const barberSchema = new mongoose.Schema(
         default:0
     },
     start_time:{
-      type:time
+      type: Object,
+      default:{}
     },
     end_time:{
-      type:time
+      type:Object,
+      default:{}
     },
     verificationToken: {
       type: String

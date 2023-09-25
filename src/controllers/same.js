@@ -157,3 +157,33 @@ exports.setpassword = catchAsync(async (req, res, next) => {
         status:"success"
     })
 })
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+    const user = req.user;
+console.log(req.body)
+    if (
+        !req.body.NewPassword ||
+        !req.body.NewConfirmPassword
+    ) {
+        return next(
+            new AppError(
+                "Please Provide new Password and Confirm Password",
+                400
+            )
+        );
+    }
+
+    if (req.body.NewPassword !== req.body.NewConfirmPassword) {
+        throw new AppError(
+            "New Password and Confirm Password Do Not Match",
+            400
+        );
+    }
+
+    user.password = req.body.NewPassword;
+    await user.save();
+    res.status(200).json({
+        status: "success",
+        message: "Password Reset Successfully",
+    });
+});

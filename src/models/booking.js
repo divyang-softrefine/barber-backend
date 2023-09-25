@@ -3,11 +3,14 @@ const validator = require("validator");
 
 const bookingSchema = new mongoose.Schema(
   {
-    user_id: {
+    first_id: {
         type: mongoose.Schema.ObjectId,
-        ref: "users",
     },
-    
+    userRole: {
+        type: String,
+        enum: ["barber", "customer"],
+        default: "customer",
+    },
     bookings:[{
         start_time:{
             type:Date,
@@ -17,12 +20,22 @@ const bookingSchema = new mongoose.Schema(
             type:Date,
             required:true
         },
+        service:[{
+            name: {
+                type: String,
+            },
+            time: {
+                type: String,
+            },
+            price: {
+                type: String,
+            }
+        }],
         total:{
             type:Number
         },
-        barber_id:{
+        second_id:{
             type: mongoose.Schema.ObjectId,
-            ref: "barbers",
         },
     }]
   }
