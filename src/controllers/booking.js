@@ -1,33 +1,114 @@
 const Barber = require("../models/barber");
+const Booking = require("../models/booking");
 const jwt = require("jsonwebtoken");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
 const bcrypt = require('bcryptjs');
 const salt = bcrypt.genSaltSync(10);
 const { promisify } = require("util");
-const {createJWTToken} = require("./user")
+const {createJWTToken} = require("./user");
+const { default: mongoose } = require("mongoose");
+const barber = require("../models/barber");
 
-exports.shopdetail = catchAsync(async (req, res, next) => {
-  const detail = req.body.detail;
+//barber whole is taken as dummy;
+exports.gettimes = catchAsync(async (req, res, next) => {
+  const barber_id = req.params.id ;
 
-  const user = req.user;
+  const barber = await Barber.findOne({ _id: barber_id }).lean();
+  const seats = barber.seats || 1;
 
-  const barber = await Barber.findOne({user_id:user._id});
+  const start = [barber.start_time.hours, barber.start_time.minutes];
+  const end = [barber.end_time.hours, barber.end_time.minutes];
 
-    if(detail.start_time){
-        throw new AppError("Please Provide start time", 400);
-    }else if(detail.end_time){
-        throw new AppError("Please Provide end time", 400);
-    }
+  const time = [parseInt(parseInt(req.body.time) / 60),parseInt(req.body.time)%60] ;
+  
+  let data =  [];
+  let today = new Date(req.body.appointment_date);
+  let tomorrow = new Date(req.body.appointment_date);
+  tomorrow = new Date(tomorrow.setDate(tomorrow.getDate()+1));
+  while(true){
+    let startTime = new Date(today.getFullYear(), today.getMonth() , today.getDate(), start[0], start[1]);
+    start[0] = start[0] + time[0] + parseInt((start[1] + time[1])/60);
+    start[1] = (start[1] + time[1]) % 60;
+    let endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(),start[0], start[1]);
+    if(start[0]>end[0] || (start[0]===end[0]&& start[1]>end[1]) )break;
+    data.push({ startTime,endTime,count:0 })
+  }
+  
 
-  barber.start_time = detail.start_time;
-  barber.end_time = detail.end_time;
-  barber.seats = detail.seats?detail.seats:0;
+  const booking = await Booking.aggregate([
+    {
+      $match:{
+        first_id:new mongoose.Types.ObjectId(barber_id)
+      }
+    },
+    {
+      $unwind: "$bookings",
+    },
+    {
+      $match: {
+        $and: [
+          {
+            "bookings.start_time": {
+              $gte: today ,
+            },
+          },
+          {
+            "bookings.end_time": {
+              $lte: tomorrow,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+  let final = [];
 
-  await barber.save();
+  data.forEach((d)=>{
+    booking.forEach((b)=>{
+      
+        if(!((d.startTime<b.bookings.start_time && d.endTime<=b.bookings.start_time)||
+          (d.startTime >= b.bookings.end_time && d.endTime > b.bookings.end_time)
+          )){
+          d.count++;
+        }
+    })
+  })
+  data.forEach((d) => {
+    let label = d.startTime.getHours() + ":" + d.startTime.getMinutes() + "-" + d.endTime.getHours() + ":" + d.endTime.getMinutes();
+    let value =label;
+      if (d.count>=seats) {
+       final.push({disabled:true,label,value});
+      }else{
+        final.push({ disabled: false, label, value });
+      }
+  })
 
   res.send({
-    message:"Barber Details Updated Successfully",
-    data:barber
+    message:"Barber Detail Successfully",
+    data:final
   })
 });
+
+exports.bookappointment = catchAsync(async (req, res, next) => {
+  const {barber_id,start_time,end_time,services,time} = req.body;
+
+  const user = req.user;
+  const bb = await Booking.findOne({ first_id: new mongoose.Types.ObjectId(barber_id), userRole: 'barber' });
+  bb.bookings.push({start_time,end_time,services,total:time,second_id:user._id});
+  await bb.save();
+
+  res.send({
+    message: "Appointment Booked Successfully",
+    data: bb
+  })
+});
+
+exports.getmyappointmnet = catchAsync(async (req, res, next) => {
+  const bookings = await Booking.findOne({ first_id: new mongoose.Types.ObjectId(req.user._id)});
+
+  res.send({
+    message:"success",
+    data:barber.bookings
+  })
+})

@@ -45,7 +45,7 @@ const barberSchema = new mongoose.Schema(
     }],
     seats:{
         type:Number,
-        default:0
+        default:1
     },
     start_time:{
       type: Object,

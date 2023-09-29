@@ -3,6 +3,7 @@ const validator = require("validator");
 
 const bookingSchema = new mongoose.Schema(
   {
+    //for whose object is created. 
     first_id: {
         type: mongoose.Schema.ObjectId,
     },
@@ -34,6 +35,7 @@ const bookingSchema = new mongoose.Schema(
         total:{
             type:Number
         },
+        //for whose object is refrenced created.
         second_id:{
             type: mongoose.Schema.ObjectId,
         },

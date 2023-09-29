@@ -12,7 +12,7 @@ exports.services = catchAsync(async (req, res, next) => {
   if(goods && goods.length===0){
     throw new AppError("Services can't be empty", 404);
   }
-  const barber = await Barber.findOne({_id:'650b01588d390cc1f06aff4d'});
+  const barber = await Barber.findOne({_id:req.user._id});
   if(!barber){
     throw new AppError("Barber Not found", 404);
   }
@@ -27,7 +27,7 @@ exports.services = catchAsync(async (req, res, next) => {
 
 exports.getservices = catchAsync(async (req, res, next) => {  
   const id = req.params.id;
-    const barber = await Barber.findOne({_id:'650b01588d390cc1f06aff4d'});
+    const barber = await Barber.findOne({_id:id});
     if(!barber){
       throw new AppError("Barber Not found", 404);
     }
@@ -35,14 +35,13 @@ exports.getservices = catchAsync(async (req, res, next) => {
       message:"Services",
       data:barber.services
     })
-  });
+});
 
 exports.shopdetail = catchAsync(async (req, res, next) => {
   const detail = req.body;
-  console.log(detail)
   const user = req.user;
 
-  const barber = await Barber.findOne({ _id:'650b01588d390cc1f06aff4d'});
+  const barber = await Barber.findOne({ _id:user._id});
 
     if(!detail.start_time){
         throw new AppError("Please Provide start time", 400);
@@ -60,10 +59,7 @@ exports.shopdetail = catchAsync(async (req, res, next) => {
     hour: end_time[0],
     minute: end_time[1]
   }
-  console.log(start_time);
-  console.log(barber)
   barber.start_time = start_time;
-  console.log(end_time)
   barber.end_time = end_time;
 
   barber.seats = detail.seats?detail.seats:0;

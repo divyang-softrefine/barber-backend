@@ -9,6 +9,8 @@ const { promisify } = require("util");
 const { createJWTToken } = require("./user")
 const crypto = require('crypto')
 const nodemailer = require('nodemailer');
+const Booking = require("../models/booking");
+const mongoose = require('mongoose')
 
 function generateVerificationToken() {
     return crypto.randomBytes(32).toString('hex');
@@ -94,7 +96,7 @@ exports.verifyEmail = catchAsync(async (req, res, next) => {
         }
     }
     
-    // Mark the user as verified and clear the verification token
+    // Mark the user as verified 
     if (!user.verified){
         user.verified = true;
         await user.save();
@@ -152,6 +154,10 @@ exports.setpassword = catchAsync(async (req, res, next) => {
     user.password =pass1;
     await user.save();
 
+    const userRole = data[1] === 'User' ?'customer' :'barber';
+    const booking = new Booking({ first_id: new mongoose.Types.ObjectId(user._id), userRole,bookings:[]});
+    await booking.save();
+
     res.send({
         message:"Password Updated Successfully",
         status:"success"
@@ -160,7 +166,6 @@ exports.setpassword = catchAsync(async (req, res, next) => {
 
 exports.resetPassword = catchAsync(async (req, res, next) => {
     const user = req.user;
-console.log(req.body)
     if (
         !req.body.NewPassword ||
         !req.body.NewConfirmPassword
